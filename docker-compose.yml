@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+    nginx:
+        image: nginx:latest
+        # монрируем лок дир ./ to remote dir
+        volumes:
+            - ./:/var/www/
+            - ./__docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ./__docker/nginx/conf.d/:/etc/nginx/conf.d
+        ports:
+            - 8080:8080
+        container_name: nginx_sanext
+        depends_on:
+            - php-fpm
+
+    php-fpm:
+        user: "1000:1000"
+        build:
+            context: .
+            dockerfile: __docker/app/Dockerfile
+        environment:
+            PHP_IDE_CONFIG: "serverName=sanext"
+        volumes:
+            - ./:/var/www
+            - ./__docker/app/xdebug.ini:/usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+            - ./__docker/app/error_reporting.ini:/usr/local/etc/php/conf.d/error_reporting.ini
+            - ./__docker/app/php.ini:/usr/local/etc/php/conf.d/my-custom-php.ini
+        container_name: php-fpm_sanext
+        depends_on:
+            - mariadb
+
+
+    mariadb:
+        user: "1000:1000"
+        image: mariadb:10
+        # restart container always ( когда контейнер подает по какойто причне)
+        volumes:
+            - ./__docker/mysql:/var/lib/mysql
+        ports:
+            - 3306:3306
+        environment:
+            MARIADB_ROOT_PASSWORD: SuperUser
+            MARIADB_USER: superuser
+            MARIADB_PASSWORD: SuperUser
+            MARIADB_DATABASE: sanext
+        container_name: mariadb_sanext
+
+    myadmin:
+        image: phpmyadmin:latest
+            #    restart: always
+        depends_on:
+            - mariadb
+        ports:
+            - 8081:80
+        environment:
+            PMA_HOST: mariadb
+            UPLOAD_LIMIT: 300M
+        container_name: myadmin_sanext
+
